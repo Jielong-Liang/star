@@ -1,0 +1,52 @@
+---
+title: "Untitled"
+author: "Geron"
+date: "2023-10-04"
+output: html_document
+---
+```{r}
+library(dplyr)
+library(entropy)
+
+star <- read.csv("star_classification.csv")
+star <- star[,c(2,3,4,5,6,7,8,14,15,17)]
+star_col <- colnames(star[,-8])
+star_entropy <- star %>%
+  group_by(class) %>%
+  summarise(entropy = entropy(table(class)))
+
+star_new <- star
+min_labels_to_keep <- 10
+
+set.seed(1)
+for (x in unique(star$class)) {
+  entropy_value <- star_entropy$entropy[star_entropy$class == x]
+  entropy_prec <- entropy_value/sum(star_entropy$entropy)
+  num_labels_to_delete <- max(floor(0.9 * entropy_prec * nrow(star)), min_labels_to_keep)
+  indices <- which(star$class == x)
+  random_indices <- sample(indices, size = num_labels_to_delete, replace = FALSE)
+  
+  star_new$class[random_indices] <- NA
+}
+head(star_new)
+table(star_new$class)
+
+write.csv(star_new, file = "star_classification_0.9_entropy_sampling.csv", row.names = FALSE)
+```
+
+```{r}
+set.seed(123)
+star_new <- star
+for (x in c("GALAXY", "QSO", "STAR")) {
+  indices <- which(star$class == x)
+  num_to_remove <- floor(0.1 * length(indices))
+  missing_indices <- sample(indices, size = num_to_remove, replace = FALSE)
+  star_new$class[missing_indices] <- NA
+}
+
+# 查看结果
+head(star_new)
+table(star_new$class)
+write.csv(star_new, file = "star_classification_0.1_stratified_sampling.csv", row.names = FALSE)
+```
+
